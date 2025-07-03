@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: hatchboy_development
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: demo123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  hatchboy:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      RAILS_ENV: development
+      DATABASE_URL: "postgresql://postgres:demo123@postgres:5432/hatchboy_development"
+      ADMIN_EMAIL: "admin@hatchboy-demo.com"
+      ADMIN_PASSWORD: "demo123456"
+      ADMIN_NAME: "Demo Admin"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: >
+      bash -c "
+        bundle exec rake db:create db:migrate db:seed &&
+        bundle exec rails server -b 0.0.0.0 -p 3000
+      "
+
+volumes:
+  postgres_data:
